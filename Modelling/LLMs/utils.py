@@ -1,6 +1,8 @@
 from langchain.agents import create_agent
 from dotenv import load_dotenv, find_dotenv
 import os
+import requests
+import json
 
 # Load environment variables from a .env file
 dotenv_path = find_dotenv()
@@ -12,13 +14,57 @@ load_dotenv(dotenv_path)
 print(f"Loaded .env from path: {dotenv_path}")
 print(f"Key loaded: {bool(os.getenv('OPENAI_API_KEY'))}")
 
-# Create a tool that returns a single value
-def predict_number_of_children(gender: str, Q217: bool, Q281: bool) -> int:
+# FastAPI endpoint URL
+FASTAPI_URL = "http://localhost:8000/predict"
+
+# Create a tool that calls the FastAPI endpoint
+def predict_number_of_children(gender: str, Q217: bool, Q281: bool) -> str:
     """
     Predict the number of children based on the given parameters.
-    Dummy function to test agent integration.
+    Calls the FastAPI service at localhost:8000/predict
+    
+    Args:
+        gender: Gender of the person ('male' or 'female')
+        Q217: WVS feature Q217 (boolean)
+        Q281: WVS feature Q281 (boolean)
+    
+    Returns:
+        String with prediction and interpretation
     """
-    return 1
+    try:
+        # Prepare request payload
+        payload = {
+            "gender": gender,
+            "Q217": Q217,
+            "Q281": Q281
+        }
+        
+        # Call FastAPI endpoint
+        response = requests.post(FASTAPI_URL, json=payload, timeout=5)
+        response.raise_for_status()
+        
+        # Parse response
+        result = response.json()
+        
+        # Format response for the agent
+        predicted = result["predicted_children"]
+        ci = result["confidence_interval"]
+        drivers = result["drivers"]
+        
+        # Build interpretation string
+        interpretation = f"Predicted children: {predicted} (95% CI: [{ci[0]}, {ci[1]}])\n"
+        interpretation += "\nKey drivers:\n"
+        for driver in drivers:
+            interpretation += f"- {driver['name']}: {driver['interpretation']}\n"
+        
+        return interpretation
+        
+    except requests.exceptions.ConnectionError:
+        return "Error: FastAPI server not running. Start it with: python fastapi.py"
+    except requests.exceptions.Timeout:
+        return "Error: API request timed out"
+    except Exception as e:
+        return f"Error calling prediction API: {str(e)}"
 
 agent = create_agent(
     model="gpt-5",
