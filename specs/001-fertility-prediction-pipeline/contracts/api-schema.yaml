@@ -1,0 +1,371 @@
+openapi: 3.0.3
+info:
+  title: Fertility Prediction API
+  description: FastAPI service for predicting number of children based on WVS features with LLM integration
+  version: 1.0.0
+  contact:
+    name: IS5126 Fertility Prediction Team
+    email: support@example.com
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+
+paths:
+  /predict:
+    post:
+      summary: Predict number of children
+      description: |
+        Accepts WVS feature inputs and returns fertility prediction with confidence interval 
+        and feature importance. Used by Langchain chatbot to provide personalized insights.
+      operationId: predictFertility
+      tags:
+        - Prediction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PredictionRequest'
+            examples:
+              example_user:
+                summary: Example user profile
+                value:
+                  Q1: 1
+                  Q260: 2
+                  Q262: 28
+                  Q273: 1
+                  Q275: 5
+                  Q288: 6
+                  Q28: 2
+                  Q37: 3
+                  Q38: 3
+      responses:
+        '200':
+          description: Successful prediction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PredictionResponse'
+              examples:
+                successful_prediction:
+                  summary: Successful prediction example
+                  value:
+                    predicted_children: 1.8
+                    confidence_interval: [1.0, 2.6]
+                    drivers:
+                      - name: "Q1_family_importance"
+                        coefficient: 0.45
+                        interpretation: "High family importance increases predicted fertility"
+                      - name: "Q288_income"
+                        coefficient: 0.32
+                        interpretation: "Higher income associated with more children"
+                      - name: "Q262_age"
+                        coefficient: 0.18
+                        interpretation: "Older age associated with higher completed fertility"
+                    metadata:
+                      model_id: "linear_regression_v1"
+                      model_type: "OLS"
+                      r_squared: 0.23
+                      rmse: 0.85
+        '400':
+          description: Invalid input (missing features, out-of-range values)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_feature:
+                  summary: Missing required feature
+                  value:
+                    error: "Validation error"
+                    message: "Missing required feature: Q1"
+                    status_code: 400
+        '500':
+          description: Model inference error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Returns API status and loaded model information
+      operationId: healthCheck
+      tags:
+        - System
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              examples:
+                healthy:
+                  summary: Healthy API
+                  value:
+                    status: "healthy"
+                    model_loaded: true
+                    model_id: "linear_regression_v1"
+                    uptime_seconds: 3600
+
+  /models:
+    get:
+      summary: List available models
+      description: Returns metadata for all trained models available for prediction
+      operationId: listModels
+      tags:
+        - Models
+      responses:
+        '200':
+          description: List of available models
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelListResponse'
+
+components:
+  schemas:
+    PredictionRequest:
+      type: object
+      required:
+        - Q1
+        - Q260
+        - Q262
+        - Q273
+        - Q275
+        - Q288
+      properties:
+        Q1:
+          type: integer
+          description: Importance of family (1=Very important, 2=Important, 3=Not important, 4=Not at all important)
+          minimum: 1
+          maximum: 4
+          example: 1
+        Q260:
+          type: integer
+          description: Sex (1=Male, 2=Female)
+          minimum: 1
+          maximum: 2
+          example: 2
+        Q262:
+          type: integer
+          description: Age in years
+          minimum: 25
+          maximum: 49
+          example: 28
+        Q273:
+          type: integer
+          description: Marital status (1=Married, 2=Living together, 3=Divorced, 4=Separated, 5=Widowed, 6=Single)
+          minimum: 1
+          maximum: 6
+          example: 1
+        Q275:
+          type: integer
+          description: Education level (ISCED 0-8 scale)
+          minimum: 0
+          maximum: 8
+          example: 5
+        Q288:
+          type: integer
+          description: Income scale (1=Lowest to 10=Highest)
+          minimum: 1
+          maximum: 10
+          example: 6
+        Q28:
+          type: integer
+          description: Attitude - Mother working hurts children (1=Strongly agree to 4=Strongly disagree)
+          minimum: 1
+          maximum: 4
+          example: 2
+        Q37:
+          type: integer
+          description: Attitude - Woman needs children to be fulfilled (1=Strongly agree to 4=Strongly disagree)
+          minimum: 1
+          maximum: 4
+          example: 3
+        Q38:
+          type: integer
+          description: Attitude - Duty to have children (1=Strongly agree to 4=Strongly disagree)
+          minimum: 1
+          maximum: 4
+          example: 3
+      additionalProperties: false
+
+    PredictionResponse:
+      type: object
+      required:
+        - predicted_children
+        - confidence_interval
+        - drivers
+        - metadata
+      properties:
+        predicted_children:
+          type: number
+          format: float
+          description: Predicted number of children (continuous, typically 0-4 range)
+          example: 1.8
+        confidence_interval:
+          type: array
+          items:
+            type: number
+            format: float
+          minItems: 2
+          maxItems: 2
+          description: 95% confidence interval [lower, upper]
+          example: [1.0, 2.6]
+        drivers:
+          type: array
+          items:
+            $ref: '#/components/schemas/FeatureImportance'
+          description: Top 3-5 features driving prediction, sorted by absolute coefficient
+          minItems: 3
+          maxItems: 5
+        metadata:
+          type: object
+          properties:
+            model_id:
+              type: string
+              example: "linear_regression_v1"
+            model_type:
+              type: string
+              enum: [OLS, Poisson, NegativeBinomial, LASSO, RandomForest, XGBoost]
+              example: "OLS"
+            r_squared:
+              type: number
+              format: float
+              description: Model R² on test set
+              example: 0.23
+            rmse:
+              type: number
+              format: float
+              description: Root mean squared error
+              example: 0.85
+
+    FeatureImportance:
+      type: object
+      required:
+        - name
+        - coefficient
+        - interpretation
+      properties:
+        name:
+          type: string
+          description: Feature name (e.g., Q1_family_importance)
+          example: "Q1_family_importance"
+        coefficient:
+          type: number
+          format: float
+          description: Model coefficient or importance score
+          example: 0.45
+        interpretation:
+          type: string
+          description: Plain-language interpretation of feature effect
+          example: "High family importance increases predicted fertility"
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+        - status_code
+      properties:
+        error:
+          type: string
+          description: Error category
+          example: "Validation error"
+        message:
+          type: string
+          description: Detailed error message
+          example: "Missing required feature: Q1"
+        status_code:
+          type: integer
+          description: HTTP status code
+          example: 400
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - model_loaded
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+          example: "healthy"
+        model_loaded:
+          type: boolean
+          description: Whether prediction model is loaded
+          example: true
+        model_id:
+          type: string
+          description: ID of currently loaded model
+          example: "linear_regression_v1"
+        uptime_seconds:
+          type: integer
+          description: API uptime in seconds
+          example: 3600
+
+    ModelListResponse:
+      type: object
+      required:
+        - models
+      properties:
+        models:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelMetadata'
+
+    ModelMetadata:
+      type: object
+      required:
+        - model_id
+        - model_type
+        - training_date
+        - performance
+      properties:
+        model_id:
+          type: string
+          example: "linear_regression_v1"
+        model_type:
+          type: string
+          enum: [OLS, Poisson, NegativeBinomial, LASSO, RandomForest, XGBoost]
+          example: "OLS"
+        training_date:
+          type: string
+          format: date-time
+          example: "2025-11-01T14:30:00Z"
+        training_sample_size:
+          type: integer
+          example: 939
+        feature_count:
+          type: integer
+          example: 45
+        performance:
+          type: object
+          properties:
+            r_squared:
+              type: number
+              format: float
+              example: 0.23
+            rmse:
+              type: number
+              format: float
+              example: 0.85
+            mae:
+              type: number
+              format: float
+              example: 0.67
+        file_path:
+          type: string
+          example: "Modelling/Outputs/models/linear_regression.pkl"
+
+tags:
+  - name: Prediction
+    description: Fertility prediction endpoints
+  - name: Models
+    description: Model management
+  - name: System
+    description: System health and status
