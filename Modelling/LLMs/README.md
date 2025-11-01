@@ -7,7 +7,7 @@ This folder contains the LLM integration prototype for the Fertility Prediction 
 ```
 ┌─────────────┐      ┌──────────────────┐      ┌─────────────────┐
 │   User      │─────▶│  Langchain Agent │─────▶│  FastAPI Server │
-│ Conversation│      │   (utils.py)     │      │  (fastapi.py)   │
+│ Conversation│      │   (utils.py)     │      │  (api_utils.py)   │
 └─────────────┘      └──────────────────┘      └─────────────────┘
                               │                          │
                               │                          │
@@ -46,7 +46,7 @@ In **Terminal 1**:
 
 ```powershell
 cd "Modelling\LLMs"
-python fastapi.py
+python api_service.py
 ```
 
 Expected output:
@@ -142,10 +142,10 @@ AI says: Based on your inputs, the predicted number of children is approximately
 
 ## Upgrading to Real Model
 
-### Replace Mock Model in `fastapi.py`
+### Replace Mock Model in `api_utils.py`
 
 ```python
-# In fastapi.py, replace MockFertilityModel with:
+# In api_utils.py, replace MockFertilityModel with:
 
 import joblib
 
@@ -182,9 +182,9 @@ model = RealFertilityModel("../Outputs/models/linear_regression.pkl")
 # Install test dependencies
 pip install pytest httpx
 
-# Create test file: test_fastapi.py
+# Create test file: test_api_utils.py
 # Run tests
-pytest test_fastapi.py
+pytest test_api_utils.py
 ```
 
 ### Integration Test for Full Flow
@@ -214,7 +214,7 @@ See: `../../specs/001-fertility-prediction-pipeline/contracts/api-schema.yaml`
 
 **Solution**: Start the server in a separate terminal:
 ```powershell
-python fastapi.py
+python api_utils.py
 ```
 
 ### Error: "Connection refused on port 8000"
@@ -236,7 +236,7 @@ OPENAI_API_KEY=sk-your-key-here
 ### Model predictions seem incorrect
 
 **Solution**: 
-1. Check mock model logic in `fastapi.py` (currently using simple rules)
+1. Check mock model logic in `api_utils.py` (currently using simple rules)
 2. Replace with trained model from `../Outputs/models/` when available
 3. Verify feature encoding matches training data
 
