@@ -1,0 +1,21 @@
+feature,importance
+Q273: Marital status_6.0,0.42355073693538237
+Q270: Number of people in household,0.11816938846997728
+Q261: Year of birth,0.05557370944276006
+Q262: Age,0.038167703512556245
+Q271: Do you live with your parents,0.03429529425836235
+Q186: Justifiable: Sex before marriage,0.008705303480130983
+Q275: Highest educational level: Respondent [ISCED 2011],0.005884632702936681
+Q134: Frequency in your neighborhood: Police or military interfere with people’s private life,0.005778866833864375
+Q2: Important in life: Friends,0.005158420101599824
+Q290: Ethnic group_702006.0,0.00483916146613089
+O1_LONGITUDE: Geographical Coordinates - Longitude,0.004048331153968014
+Q37: Duty towards society to have children,0.0036533534642451187
+Q47: State of health (subjective),0.0035671585161784042
+Q112: Perceptions of corruption in the country,0.0035537763708918396
+Q35: Problem if women have more income than husband,0.003480691814651754
+Q193: Justifiable: Having casual sex,0.0033380821719035943
+Q177: Justifiable: Claiming government benefits to which you are not entitled,0.0032402697803098146
+Q185: Justifiable: Divorce,0.0031254603528357737
+Q201: Information source: Daily newspaper,0.003088475442813939
+O2_LATITUDE: Geographical Coordinates - Latitude,0.0029126331000001223
